@@ -1,0 +1,115 @@
+project_name: paperclip-JS
+pipeline: workflow/pipeline-full-with-deep-audit.yaml
+current_phase: defect-scan-semantic
+last_updated: "2026-05-07T00:00:00.000Z"
+phases:
+  architecture:
+    status: complete
+    owner_notes:
+      - "Mapped 17 packages/modules across 6 role categories."
+      - "Identified 3 product surfaces (CLI, UI SPA, REST API + WS)."
+      - "Documented single-threaded Node.js concurrency with child-process offloading."
+    outputs_present:
+      - findings/architecture/architecture-map.md
+    open_questions:
+      - id: arch-OQ1
+        kind: needs-runtime-test
+        description: Does the system use any in-memory caching (e.g., Redis, LRU) beyond DB?
+        deferred_reason: Not visible from source alone; runtime test or production deployment inspection needed.
+      - id: arch-OQ2
+        kind: needs-maintainer-decision
+        description: Are there plans to extract the heartbeat scheduler into a standalone worker process, or will it remain in the main server process?
+        deferred_reason: README mentions "coming soon" cloud/sandbox agents; architecture may shift.
+    carry_forward:
+      - id: arch-CF7
+        kind: defer-to-phase
+        target_phase: build-and-deploy
+        description: Full CI/CD matrix (Node versions, OS targets, sandbox-provider plugin packaging) is only partially read.
+        deferred_reason: Secondary output findings/build-and-deploy/build-and-deploy.md will accumulate this.
+  defect-scan-mechanical:
+    status: complete
+    owner_notes:
+      - "Scanned 14 mechanical defects across passes 1 (3), 2 (6), and 6 (5)."
+      - "Closed 2 architecture carry-forward items: arch-CF5 (cursor installCommand null) and arch-CF6 (hermes as-unknown cast)."
+      - "Top severity: 1 high (cursor adapter missing install path), 5 medium, 8 low."
+    outputs_present:
+      - findings/defect-scan-mechanical/mechanical-defects.md
+    open_questions: []
+    carry_forward: []
+  contracts:
+    status: complete
+    owner_notes:
+      - "Documented 6 user-facing surfaces (CLI, Web UI, REST API, WebSocket, MCP, Plugin SDK)."
+      - "Closed 2 architecture carry-forward items: arch-CF3 (per-route Zod schemas) and arch-CF4 (adapter execution context + session codec + runtime command spec)."
+      - "Black-box acceptance list: 15 scenario checks."
+    outputs_present:
+      - findings/contracts/behavioral-contracts.md
+    open_questions:
+      - id: contracts-OQ2
+        kind: needs-runtime-test
+        description: What is the exact default concurrency and catch-up policy for routines?
+        deferred_reason: Schema names suggest defaults, but runtime behavior needs fixture capture.
+      - id: contracts-OQ3
+        kind: needs-maintainer-decision
+        description: Are there plans for automatic secret key rotation UX?
+        deferred_reason: Not visible in source; current system is manual.
+      - id: contracts-OQ4
+        kind: needs-runtime-test
+        description: Do WebSocket live events guarantee delivery, or are they best-effort fire-and-forget?
+        deferred_reason: Need capture against running service.
+    carry_forward:
+      - id: contracts-CF4
+        kind: defer-to-phase
+        target_phase: porting
+        description: Detailed UI component-level behavior and React Query cache policies.
+        deferred_reason: Porting synthesis needs high-level feature parity, not component internals.
+  protocols:
+    status: complete
+    owner_notes:
+      - "Documented 5 protocol boundaries (WS, plugin JSON-RPC, adapter spawn, run logs, event bus)."
+      - "Closed 4 carry-forward items: arch-CF1, arch-CF2, contracts-CF1, contracts-CF2."
+      - "Catalogued 50+ worker-to-host service methods and 20+ host-to-worker RPC methods."
+    outputs_present:
+      - findings/protocols/protocols-and-state.md
+    open_questions:
+      - id: protocols-OQ2
+        kind: needs-runtime-test
+        description: What is the actual max WebSocket payload size or backpressure policy enforced by the ws library configuration?
+        deferred_reason: Not visible from source; ws defaults apply unless overridden.
+      - id: protocols-OQ3
+        kind: needs-maintainer-decision
+        description: Are plugin worker environment variables intentionally minimal (no DATABASE_URL, no host secrets), or should future plugins receive additional host context?
+        deferred_reason: Current code explicitly strips host env for security; policy decision.
+    carry_forward:
+      - id: protocols-CF2
+        kind: defer-to-phase
+        target_phase: porting
+        description: Detailed UI component-level behavior and React Query cache policies. (mirrored from contracts-CF4)
+        deferred_reason: Porting synthesis needs high-level feature parity, not component internals.
+  defect-scan-semantic:
+    status: complete
+    owner_notes:
+      - "Scanned 10 semantic defects across passes 3 (4), 4 (3), and 5 (3)."
+      - "Closed 2 carry-forward items: contracts-CF3 and protocols-CF1 (checkout+budget atomicity)."
+      - "Resolved contracts-OQ1: budget hard stop does cancel in-flight runs via evaluateCostEvent."
+      - "Top severity: 1 high (budget/checkout TOCTOU), 5 medium, 3 low."
+    outputs_present:
+      - findings/defect-scan-semantic/semantic-defects.md
+    open_questions: []
+    carry_forward: []
+  porting:
+    status: pending
+    owner_notes: []
+    outputs_present: []
+    open_questions: []
+    carry_forward: []
+  reimplementation-spec:
+    status: pending
+    owner_notes: []
+    outputs_present: []
+    open_questions: []
+    carry_forward: []
+current_phase: porting
+last_updated: "2026-05-07T00:00:00.000Z"
+next_actions:
+  - "Run porting phase per findings/porting/SKILL.md"
